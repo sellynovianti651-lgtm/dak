@@ -1,0 +1,641 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mal Balok Dak 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: viewport 3D di kiri, panel kontrol di kanan; menumpuk di layar sempit */
+:root {
+  --bg: #f1f3f6;
+  --panel: #ffffff;
+  --fg: #17202b;
+  --muted: #5b6876;
+  --line: #d6dce3;
+  --canvas: #e4e9ef;
+  --slab: #b4bfcb;
+  --edge: #17202b;
+  --accent: #1d5fc4;
+  --accent-soft: #e3ecfa;
+  --mag: #b8208a;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c;
+    --panel: #19202a;
+    --fg: #e6ebf0;
+    --muted: #93a1b0;
+    --line: #2a3440;
+    --canvas: #0d1217;
+    --slab: #6f7d8d;
+    --edge: #c9d4e0;
+    --accent: #6aa5ff;
+    --accent-soft: #1f2e46;
+    --mag: #ee62c0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c;
+  --panel: #19202a;
+  --fg: #e6ebf0;
+  --muted: #93a1b0;
+  --line: #2a3440;
+  --canvas: #0d1217;
+  --slab: #6f7d8d;
+  --edge: #c9d4e0;
+  --accent: #6aa5ff;
+  --accent-soft: #1f2e46;
+  --mag: #ee62c0;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--font-ui);
+  padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1280px; margin: 0 auto; }
+header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 65ch; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+.stage {
+  position: relative;
+  height: clamp(380px, 72vh, 800px);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.tip {
+  position: absolute; pointer-events: none; z-index: 2;
+  background: var(--panel); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 6px 9px; font-size: 12px; line-height: 1.35; max-width: 220px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+.tip b { display: block; font-weight: 600; }
+.tip span { color: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.hint {
+  position: absolute; left: 10px; bottom: 8px; right: 10px;
+  font-size: 11.5px; color: var(--muted); pointer-events: none;
+}
+
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.card h2 {
+  margin: 0 0 8px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+label.chk { display: flex; align-items: center; gap: 8px; cursor: pointer; min-width: 0; }
+input[type="checkbox"], input[type="range"] { accent-color: var(--accent); }
+input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.slider { margin-top: 10px; }
+.slider .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+.slider input { width: 100%; margin: 6px 0 0; }
+
+.views { display: flex; flex-wrap: wrap; gap: 6px; }
+.views button {
+  font: inherit; font-size: 13px; color: var(--fg); background: transparent;
+  border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; cursor: pointer;
+}
+.views button:hover { border-color: var(--accent); color: var(--accent); }
+.views button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.legend { display: flex; flex-direction: column; gap: 4px; }
+.legend label.chk { padding: 3px 0; }
+.sw { width: 12px; height: 12px; border-radius: 2px; flex: none; }
+.legend .name { font-weight: 500; }
+.legend .dim { color: var(--muted); font-size: 12px; }
+.legend .len { margin-left: auto; font-size: 12.5px; }
+.legend .total { display: flex; justify-content: space-between; border-top: 1px solid var(--line); margin-top: 4px; padding-top: 8px; color: var(--muted); font-size: 12.5px; }
+.legend .total .mono { color: var(--fg); }
+
+.sect { width: 100%; height: auto; display: block; }
+.sect text { fill: var(--fg); font: 10.5px var(--font-mono); }
+.sect .m { fill: var(--mag); }
+.cap { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.notes { margin: 0; padding-left: 16px; color: var(--muted); font-size: 12.5px; display: flex; flex-direction: column; gap: 5px; }
+.notes b { color: var(--fg); font-weight: 500; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Mal Balok Dak 3D</h1>
+    <p>Model tiga dimensi dari denah balok dengan sisi atas balok rata, dak tebal 9 cm, dan gutter terbuka memanjang. Elevasi +12.70 s/d +12.90. Satuan dimensi dalam cm. Arahkan kursor ke balok, kolom atau dak untuk melihat datanya.</p>
+  </header>
+
+  <div class="layout">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="Model 3D balok dan dak"></canvas>
+      <div class="tip" id="tip" hidden></div>
+      <div class="hint">Seret untuk memutar · scroll atau cubit untuk zoom · klik kanan atau dua jari untuk menggeser</div>
+    </div>
+
+    <aside class="side">
+      <section class="card">
+        <h2>Sudut pandang</h2>
+        <div class="views" id="views">
+          <button type="button" data-v="iso" aria-pressed="true">Isometrik</button>
+          <button type="button" data-v="atas" aria-pressed="false">Atas</button>
+          <button type="button" data-v="depan" aria-pressed="false">Depan (A)</button>
+          <button type="button" data-v="samping" aria-pressed="false">Samping</button>
+          <button type="button" data-v="bawah" aria-pressed="false">Bawah</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tampilkan</h2>
+        <div class="checks">
+          <label class="chk"><input type="checkbox" id="l-slab" checked> Dak</label>
+          <label class="chk"><input type="checkbox" id="l-beam" checked> Balok</label>
+          <label class="chk"><input type="checkbox" id="l-col" checked> Kolom</label>
+          <label class="chk"><input type="checkbox" id="l-gut" checked> Gutter</label>
+          <label class="chk"><input type="checkbox" id="l-stair" checked> Tangga &amp; KM/WC</label>
+          <label class="chk"><input type="checkbox" id="l-grid" checked> As grid</label>
+          <label class="chk"><input type="checkbox" id="l-lab" checked> Label</label>
+        </div>
+        <div class="slider">
+          <div class="row"><label for="op">Kepadatan dak</label><span class="mono" id="opv">35%</span></div>
+          <input type="range" id="op" min="10" max="100" value="35">
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Tipe balok</h2>
+        <div class="legend" id="legend"></div>
+      </section>
+
+      <section class="card">
+        <h2>Potongan gutter</h2>
+        <svg class="sect" viewBox="0 0 330 200" role="img" aria-label="Potongan gutter terbuka, lantai dak langsung turun ke saluran tanpa bibir dalam">
+          <path d="M10 58 L130 58 L130 109 L265 109 L265 34 L310 34 L310 184 L265 184 L265 124 L130 124 L130 109 L10 109 Z" style="fill:var(--slab);stroke:var(--fg);stroke-width:1.2"/>
+          <path d="M130 109 L265 109 L265 124 L130 124 Z" style="fill:#46b8c9;stroke:var(--fg);stroke-width:1.2"/>
+          <line x1="0" y1="34" x2="330" y2="34" style="stroke:var(--mag);stroke-width:1;stroke-dasharray:5 3"/>
+          <text class="m" x="10" y="27">+12.70</text>
+          <text x="16" y="82">dak 9</text>
+          <line x1="130" y1="140" x2="310" y2="140" style="stroke:var(--muted);stroke-width:1"/>
+          <line x1="130" y1="136" x2="130" y2="144" style="stroke:var(--muted);stroke-width:1"/>
+          <line x1="265" y1="136" x2="265" y2="144" style="stroke:var(--muted);stroke-width:1"/>
+          <line x1="310" y1="136" x2="310" y2="144" style="stroke:var(--muted);stroke-width:1"/>
+          <text x="183" y="158">30 cm bersih</text>
+          <text x="273" y="170" transform="rotate(-90 291 170)">dinding luar</text>
+          <text x="16" y="130">lantai langsung turun</text>
+        </svg>
+        <p class="cap">Potongan skematik: sisi dalam tanpa bibir, lantai langsung turun ke saluran; sisi luar memakai dinding tepi. Ukuran dalam cm.</p>
+      </section>
+
+      <section class="card">
+        <h2>Asumsi model</h2>
+        <ul class="notes">
+          <li><b>Elevasi dak:</b> +12.90 di as A, turun 2% (20 cm per 10 m) ke +12.70, lalu datar sampai gutter.</li>
+          <li><b>Tebal dak:</b> 9 cm. Semua balok disetel rata pada sisi atas; tinggi 40/45/50 cm diukur ke bawah dari elevasi atas yang sama.</li>
+          <li><b>Gutter:</b> saluran terbuka memanjang seperti foto. Sisi dalam tanpa bibir/banan: lantai langsung turun ke saluran. Sisi luar memiliki dinding tepi. Lebar bersih 30 cm; dasar saluran 10 cm di bawah +12.70. Lantai di antara as E dan gutter 8,5 cm di bawah +12.70.</li>
+          <li><b>Tangga:</b> 22 anak tangga, optrade 18,2 dan antrade 30 dari denah tangga. Lari 7–21 di bawah lubang 120 × 445, bordes dan anak tangga 1–5 menyambung ke arah E. Letak dan tinggi KM/WC hanya perkiraan dari denah tangga.</li>
+          <li><b>Kolom:</b> 30 × 30 pada grid, 20 × 20 pada as 310 dan 760. Tinggi di bawah dak hanya ilustrasi.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  var CM = 0.01, OX = 450, OY = 975;
+
+  // Elevasi muka dak relatif terhadap +12.70, dalam cm (sumbu y denah, A = 0)
+  function f(y) { return y <= 1000 ? 20 - 0.02 * y : 0; }
+
+  var TYPES = {
+    'B20/40': { w: 20, h: 40, c: 0x4f8fd1 },
+    'B20/45': { w: 20, h: 45, c: 0x3aa79a },
+    'B20/50': { w: 20, h: 50, c: 0x8a6fd1 },
+    'B25/50': { w: 25, h: 50, c: 0xd9684b },
+    'B15/50': { w: 15, h: 50, c: 0xd9a23b }
+  };
+  function hex(c) { return '#' + c.toString(16).padStart(6, '0'); }
+
+  // [tipe, x0, y0, x1, y1] dalam cm, as ke as
+  var BEAMS = [
+    ['B20/50', 0, 0, 900, 0],        // as A
+    ['B20/40', 0, 530, 900, 530],    // as B
+    ['B25/50', 0, 1060, 900, 1060],  // as C
+    ['B25/50', 0, 1530, 900, 1530],  // as D
+    ['B20/40', 0, 1800, 900, 1800],  // as E
+    ['B15/50', 0, 1950, 900, 1950],  // as F
+    ['B20/45', 0, 0, 0, 1800],
+    ['B20/50', 0, 1800, 0, 1950],
+    ['B20/45', 450, 0, 450, 1950],
+    ['B20/45', 900, 0, 900, 1950],
+    ['B20/40', 0, 267, 900, 267],
+    ['B20/40', 0, 797, 900, 797],
+    ['B20/40', 0, 1297, 310, 1297],
+    ['B20/40', 450, 1297, 760, 1297],
+    ['B20/40', 310, 797, 310, 1800],
+    ['B20/40', 760, 797, 760, 1800],
+    ['B20/40', 250, 0, 250, 267],
+    ['B20/40', 310, 956, 450, 956],
+    ['B20/40', 760, 956, 900, 956],
+    ['B15/50', 0, -65, 250, -65],
+    ['B20/50', 0, -65, 0, 0],
+    ['B20/50', 250, -65, 250, 0]
+  ];
+
+  // ---------- scene ----------
+  var stage = document.getElementById('stage');
+  var cv = document.getElementById('cv');
+  var renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
+  var controls = new THREE.OrbitControls(camera, cv);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.12;
+  controls.target.set(0, -0.3, 0);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8796a8, 0.95));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.75);
+  sun.position.set(10, 22, 14);
+  scene.add(sun);
+
+  var gSlab = new THREE.Group(), gBeam = new THREE.Group(), gCol = new THREE.Group(),
+      gGut = new THREE.Group(), gGrid = new THREE.Group(), gLab = new THREE.Group(),
+      gStair = new THREE.Group();
+  [gSlab, gBeam, gCol, gGut, gGrid, gLab, gStair].forEach(function (g) { scene.add(g); });
+
+  var edgeMats = [];
+  function edgeMat(op) {
+    var m = new THREE.LineBasicMaterial({ color: 0x17202b, transparent: true, opacity: op });
+    edgeMats.push(m);
+    return m;
+  }
+  var edgeBeam = edgeMat(0.4), edgeCol = edgeMat(0.5);
+
+  // prisma dari persegi denah; muka atas = f(y) - topOff, muka bawah = f(y) - botOff
+  function prism(x0, x1, y0, y1, topOff, botOff, mat) {
+    var g = new THREE.BoxGeometry(1, 1, 1);
+    var p = g.attributes.position;
+    for (var i = 0; i < p.count; i++) {
+      var X = p.getX(i) > 0 ? x1 : x0;
+      var Y = p.getZ(i) > 0 ? y0 : y1;
+      var top = p.getY(i) > 0;
+      var Z = f(Y) - (top ? topOff : botOff);
+      p.setXYZ(i, (X - OX) * CM, Z * CM, -(Y - OY) * CM);
+    }
+    g.computeVertexNormals();
+    g.computeBoundingSphere();
+    return new THREE.Mesh(g, mat);
+  }
+
+  // ---------- dak ----------
+  var slabMat = new THREE.MeshStandardMaterial({ color: 0xb4bfcb, roughness: 0.9, metalness: 0, transparent: true, opacity: 0.35, depthWrite: false });
+  var VOIDX = [[320, 440], [770, 890]], VOIDY = [1075, 1515];
+  var gutMat = new THREE.MeshStandardMaterial({ color: 0x46b8c9, roughness: 0.6, transparent: true, opacity: 0.95 });
+  var ys = [0, 267, 530, 797, 1000, 1060, 1075, 1515, 1530, 1800, 1897.5, 1912.5, 1942.5];
+  for (var i = 0; i < ys.length - 1; i++) {
+    var y0 = ys[i], y1 = ys[i + 1];
+    var xs = (y0 >= VOIDY[0] && y1 <= VOIDY[1]) ? [[0, 320], [440, 770], [890, 900]] : [[0, 900]];
+    xs.forEach(function (r) {
+      if (y0 === 1800) {
+        // lantai belakang: 8,5 cm di bawah muka dinding gutter dan balok (potongan Saluran Belakang)
+        var fl = prism(r[0], r[1], y0, y1, 8.5, 17.5, slabMat);
+        fl.userData = { kind: 'slab', label: 'Dak belakang', detail: 'tebal 9 cm · 8,5 cm di bawah +12.70' };
+        gSlab.add(fl);
+        return;
+      }
+      if (y0 === 1897.5) {
+        // Tepi dalam: lantai dak langsung turun ke dasar gutter, tanpa bibir/banan.
+        var transition = prism(r[0], r[1], y0, y1, 8.5, 17.5, slabMat);
+        transition.userData = { kind: 'slab', label: 'Transisi lantai ke gutter', detail: 'tanpa bibir dalam · lantai langsung turun ke saluran' };
+        gSlab.add(transition);
+        return;
+      }
+      if (y0 === 1942.5) {
+        // Tepi luar saja yang memiliki dinding pembatas.
+        var wall = prism(r[0], r[1], y0, y1, 0, 25, slabMat);
+        wall.userData = { kind: 'slab', label: 'Dinding tepi luar gutter', detail: 'tebal 15 cm · tinggi 25 cm · saluran terbuka' };
+        gSlab.add(wall);
+        return;
+      }
+      if (y0 === 1912.5) {
+        var ch = prism(r[0], r[1], y0, y1, 10, 25, gutMat);
+        ch.userData = { kind: 'gut', label: 'Dasar gutter / paritan', detail: 'lebar bersih 30 cm · dasar 10 cm di bawah +12.70 · tebal dasar 15 cm' };
+        gGut.add(ch);
+        return;
+      }
+      var m = prism(r[0], r[1], y0, y1, 0, 9, slabMat);
+      m.userData = { kind: 'slab', label: 'Dak', detail: 'tebal 9 cm' };
+      gSlab.add(m);
+    });
+  }
+  var canopy = prism(0, 250, -65, 0, 0, 9, slabMat);
+  canopy.userData = { kind: 'slab', label: 'Dak kanopi depan', detail: 'tebal 9 cm' };
+  gSlab.add(canopy);
+
+  // ---------- balok ----------
+  var typeMats = {}, typeMeshes = {}, typeLen = {};
+  Object.keys(TYPES).forEach(function (t) {
+    typeMats[t] = new THREE.MeshStandardMaterial({ color: TYPES[t].c, roughness: 0.75, metalness: 0.02 });
+    typeMeshes[t] = []; typeLen[t] = 0;
+  });
+  var bi = 0;
+  BEAMS.forEach(function (b) {
+    var t = b[0], x0 = b[1], y0 = b[2], x1 = b[3], y1 = b[4], d = TYPES[t];
+    var len = Math.abs(x1 - x0) + Math.abs(y1 - y0);
+    typeLen[t] += len;
+    var info = { kind: 'beam', type: t, label: 'Balok ' + t, detail: d.w + ' × ' + d.h + ' cm · sisi atas rata pada elevasi dak · panjang as ' + len + ' cm' };
+    var rects = [];
+    if (x0 === x1) {
+      var a = Math.min(y0, y1), c = Math.max(y0, y1);
+      if (a === -65) a -= 7.5;
+      if (c === 1950) c += 7.5;
+      if (a < 1000 && c > 1000) { rects.push([x0 - d.w / 2, x0 + d.w / 2, a, 1000]); rects.push([x0 - d.w / 2, x0 + d.w / 2, 1000, c]); }
+      else rects.push([x0 - d.w / 2, x0 + d.w / 2, a, c]);
+    } else {
+      var xa = Math.min(x0, x1), xb = Math.max(x0, x1);
+      if (xa === 0) xa -= 10;
+      if (xb === 900) xb += 10;
+      rects.push([xa, xb, y0 - d.w / 2, y0 + d.w / 2]);
+    }
+    rects.forEach(function (r) {
+      var m = prism(r[0], r[1], r[2], r[3], 0, d.h, typeMats[t]);
+      m.userData = info;
+      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 30), edgeBeam));
+      gBeam.add(m);
+      typeMeshes[t].push(m);
+    });
+    bi++;
+  });
+
+  // ---------- kolom ----------
+  var colMat = new THREE.MeshStandardMaterial({ color: 0x8c96a2, roughness: 0.85 });
+  var colSmall = new THREE.MeshStandardMaterial({ color: 0xc2358f, roughness: 0.85 });
+  function column(cx, cy, s, mat, label) {
+    var m = prism(cx - s / 2, cx + s / 2, cy - s / 2, cy + s / 2, 0, 220, mat);
+    m.userData = { kind: 'col', label: label, detail: s + ' × ' + s + ' cm · kepala kolom rata dengan sisi atas balok' };
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 30), edgeCol));
+    gCol.add(m);
+  }
+  [0, 450, 900].forEach(function (x) {
+    [0, 530, 1060, 1530, 1800].forEach(function (y) { column(x, y, 30, colMat, 'Kolom'); });
+  });
+  [310, 760].forEach(function (x) {
+    [1060, 1530].forEach(function (y) { column(x, y, 20, colSmall, 'Kolom 20 × 20 · 4D13'); });
+  });
+
+  // ---------- gutter ----------
+  // saluran gutter sudah dipotong ke dalam dak pada bagian dak di atas
+
+  // ---------- tangga + KM/WC (denah rencana tangga lt. 2-3, 22 anak tangga) ----------
+  var RISE = 18.2, TREAD = 30;
+  function ZF(i) { return -(22 - i) * RISE; }   // muka atas anak tangga ke-i, relatif +12.70
+  var stairMat = new THREE.MeshStandardMaterial({ color: 0xc9a46a, roughness: 0.8 });
+  var stairInfo = { kind: 'stair', label: 'Tangga', detail: '22 anak tangga · optrade 18,2 · antrade 30 · lebar 120 cm' };
+  function flight(i0, i1, width) {
+    var n = i1 - i0 + 1, waist = 15, L = n * TREAD, s = new THREE.Shape();
+    function P(x, z) { return [x * CM, z * CM]; }
+    var p = P(0, ZF(i0) - RISE);
+    s.moveTo(p[0], p[1]);
+    for (var k = 0; k < n; k++) {
+      var zt = ZF(i0 + k);
+      p = P(k * TREAD, zt); s.lineTo(p[0], p[1]);
+      p = P((k + 1) * TREAD, zt); s.lineTo(p[0], p[1]);
+    }
+    p = P(L, ZF(i1) - waist); s.lineTo(p[0], p[1]);
+    p = P(0, ZF(i0) - RISE - waist); s.lineTo(p[0], p[1]);
+    s.closePath();
+    var g = new THREE.ExtrudeGeometry(s, { depth: width * CM, bevelEnabled: false });
+    var m = new THREE.Mesh(g, stairMat);
+    m.userData = stairInfo;
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g, 30), edgeBeam));
+    return m;
+  }
+  // bordes (anak tangga 6) dan lari pertama (1-5) di bawah dak, lari kedua (7-21) di bawah lubang tangga
+  var f2 = flight(7, 21, 120);
+  f2.rotation.y = -Math.PI / 2;
+  f2.position.set((440 - OX) * CM, 0, -(1535 - OY) * CM);
+  gStair.add(f2);
+  var f1 = flight(1, 5, 110);
+  f1.position.set((170 - OX) * CM, 0, -(1645 - OY) * CM);
+  gStair.add(f1);
+  var land = prism(320, 440, 1535, 1645, -ZF(6), -ZF(6) + 15, stairMat);
+  land.userData = { kind: 'stair', label: 'Bordes tangga', detail: '120 × 110 cm · anak tangga ke-6' };
+  land.add(new THREE.LineSegments(new THREE.EdgesGeometry(land.geometry, 30), edgeBeam));
+  gStair.add(land);
+  var wcMat = new THREE.MeshStandardMaterial({ color: 0x9fb0c2, roughness: 0.9, transparent: true, opacity: 0.14, depthWrite: false });
+  var wc = prism(255, 440, 1645, 1785, 12, 400.4, wcMat);
+  wc.userData = { kind: 'stair', label: 'KM/WC', detail: 'skematik · letak dan tinggi perkiraan' };
+  wc.add(new THREE.LineSegments(new THREE.EdgesGeometry(wc.geometry, 30), edgeCol));
+  gStair.add(wc);
+
+  // ---------- as grid ----------
+  var dashMat = new THREE.LineDashedMaterial({ color: 0xd9534f, dashSize: 0.18, gapSize: 0.09, transparent: true, opacity: 0.8 });
+  function wp(x, y, z) { return new THREE.Vector3((x - OX) * CM, z * CM, -(y - OY) * CM); }
+  function dashed(a, b) {
+    var g = new THREE.BufferGeometry().setFromPoints([a, b]);
+    var l = new THREE.Line(g, dashMat);
+    l.computeLineDistances();
+    gGrid.add(l);
+  }
+  [0, 450, 900].forEach(function (x) { dashed(wp(x, -150, 40), wp(x, 2100, 40)); });
+  var ROWS = { A: 0, B: 530, C: 1060, D: 1530, E: 1800, F: 1950 };
+  Object.keys(ROWS).forEach(function (k) { dashed(wp(-150, ROWS[k], 40), wp(1050, ROWS[k], 40)); });
+
+  // ---------- label ----------
+  function tag(text, o) {
+    o = o || {};
+    var w = o.w || 128, h = o.h || 128;
+    var c = document.createElement('canvas');
+    c.width = w * 2; c.height = h * 2;
+    var x = c.getContext('2d');
+    x.scale(2, 2);
+    x.fillStyle = o.bg || '#ffffff';
+    x.strokeStyle = o.stroke || '#17202b';
+    x.lineWidth = 5;
+    if (o.round === false) {
+      var r = 14, pw = w - 6, ph = h - 6;
+      x.beginPath();
+      x.moveTo(3 + r, 3); x.arcTo(3 + pw, 3, 3 + pw, 3 + ph, r); x.arcTo(3 + pw, 3 + ph, 3, 3 + ph, r);
+      x.arcTo(3, 3 + ph, 3, 3, r); x.arcTo(3, 3, 3 + pw, 3, r); x.closePath();
+    } else {
+      x.beginPath(); x.arc(w / 2, h / 2, Math.min(w, h) / 2 - 4, 0, Math.PI * 2);
+    }
+    x.fill(); x.stroke();
+    x.fillStyle = o.fg || '#17202b';
+    x.font = '600 ' + (o.fs || 64) + 'px Inter, system-ui, sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(text, w / 2, h / 2 + 3);
+    var tex = new THREE.CanvasTexture(c);
+    var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+    s.scale.set((o.sc || 0.5) * w / h, (o.sc || 0.5), 1);
+    s.renderOrder = 10;
+    return s;
+  }
+  Object.keys(ROWS).forEach(function (k) {
+    var s = tag(k); s.position.copy(wp(-120, ROWS[k], 40)); gLab.add(s);
+  });
+  [['1', 0], ['2', 450], ['3', 900]].forEach(function (c) {
+    var s = tag(c[0]); s.position.copy(wp(c[1], -200, 40)); gLab.add(s);
+  });
+  [['+12.90', 0], ['+12.80', 500], ['+12.70', 1000]].forEach(function (e) {
+    var s = tag(e[0], { w: 200, h: 80, round: false, bg: '#b8208a', stroke: '#b8208a', fg: '#ffffff', fs: 44, sc: 0.34 });
+    s.position.copy(wp(225, e[1], f(e[1]) + 35)); gLab.add(s);
+  });
+  var eg = tag('+12.70', { w: 200, h: 80, round: false, bg: '#b8208a', stroke: '#b8208a', fg: '#ffffff', fs: 44, sc: 0.34 });
+  eg.position.copy(wp(675, 1870, 35)); gLab.add(eg);
+  [[380, 'Lubang tangga 120 × 445'], [830, 'Lubang tangga 120 × 445']].forEach(function (v) {
+    var s = tag(v[1], { w: 330, h: 64, round: false, bg: '#ffffff', stroke: '#b8208a', fg: '#b8208a', fs: 28, sc: 0.28 });
+    s.position.copy(wp(v[0], 1295, 45)); gLab.add(s);
+  });
+  var gt = tag('Gutter terbuka 30 cm', { w: 240, h: 64, round: false, bg: '#ffffff', stroke: '#2b8d9c', fg: '#1f6f7c', fs: 30, sc: 0.28 });
+  gt.position.copy(wp(675, 1990, 40)); gLab.add(gt);
+
+  // stek tangga, panah kemiringan lantai
+  [[380, 'Stek tangga']].forEach(function (v) {
+    var s = tag(v[1], { w: 220, h: 64, round: false, bg: '#ffffff', stroke: '#b8208a', fg: '#b8208a', fs: 28, sc: 0.28 });
+    s.position.copy(wp(v[0], 1125, 45)); gLab.add(s);
+  });
+  [136, 295, 592, 751].forEach(function (x) {
+    gLab.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, -1), wp(x, 560, f(560) + 3), 1.7, 0xe98a4b, 0.35, 0.22));
+  });
+  var sl = tag('Lantai miring ke belakang 2%', { w: 420, h: 64, round: false, bg: '#ffffff', stroke: '#e98a4b', fg: '#a8541a', fs: 28, sc: 0.28 });
+  sl.position.copy(wp(450, 480, f(480) + 45)); gLab.add(sl);
+  var wcl = tag('KM/WC', { w: 150, h: 64, round: false, bg: '#ffffff', stroke: '#6b7b8c', fg: '#3d4a58', fs: 28, sc: 0.26 });
+  wcl.position.copy(wp(348, 1715, -20)); gLab.add(wcl);
+
+  VOIDX.forEach(function (vx) {
+    var pts = [wp(vx[0], VOIDY[0], f(VOIDY[0]) + 1), wp(vx[1], VOIDY[0], f(VOIDY[0]) + 1), wp(vx[1], VOIDY[1], f(VOIDY[1]) + 1), wp(vx[0], VOIDY[1], f(VOIDY[1]) + 1)];
+    gLab.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xb8208a })));
+  });
+
+  // ---------- tema ----------
+  function tok(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function applyTheme() {
+    scene.background = new THREE.Color(tok('--canvas'));
+    slabMat.color.set(tok('--slab'));
+    var ec = tok('--edge');
+    edgeMats.forEach(function (m) { m.color.set(ec); });
+  }
+  applyTheme();
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---------- sudut pandang ----------
+  var VIEWS = { iso: [-17, 15, 24], atas: [0, 38, 0.001], depan: [0, 2, 42], samping: [44, 2, 0], bawah: [0.001, -34, 0.001] };
+  var vbtns = document.querySelectorAll('#views button');
+  function setView(n) {
+    var p = VIEWS[n];
+    camera.position.set(p[0], p[1], p[2]);
+    controls.target.set(0, -0.3, 0);
+    controls.update();
+    vbtns.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.v === n ? 'true' : 'false'); });
+  }
+  vbtns.forEach(function (b) { b.addEventListener('click', function () { setView(b.dataset.v); }); });
+  setView('iso');
+
+  // ---------- kontrol tampilan ----------
+  function bind(id, grp) {
+    document.getElementById(id).addEventListener('change', function (e) { grp.visible = e.target.checked; });
+  }
+  bind('l-slab', gSlab); bind('l-beam', gBeam); bind('l-col', gCol);
+  bind('l-gut', gGut); bind('l-grid', gGrid); bind('l-lab', gLab); bind('l-stair', gStair);
+
+  var op = document.getElementById('op'), opv = document.getElementById('opv');
+  function setOpacity() {
+    var v = +op.value / 100;
+    slabMat.opacity = v;
+    slabMat.transparent = v < 1;
+    slabMat.depthWrite = v >= 1;
+    slabMat.needsUpdate = true;
+    opv.textContent = op.value + '%';
+  }
+  op.addEventListener('input', setOpacity);
+  setOpacity();
+
+  // legenda + rekap panjang
+  var legend = document.getElementById('legend');
+  var total = 0;
+  Object.keys(TYPES).forEach(function (t) {
+    var d = TYPES[t];
+    total += typeLen[t];
+    var l = document.createElement('label');
+    l.className = 'chk';
+    l.innerHTML = '<input type="checkbox" checked><span class="sw" style="background:' + hex(d.c) + '"></span>' +
+      '<span class="name">' + t + '</span><span class="dim mono">' + d.w + '×' + d.h + '</span>' +
+      '<span class="len mono">' + (typeLen[t] / 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' m</span>';
+    l.querySelector('input').addEventListener('change', function (e) {
+      typeMeshes[t].forEach(function (m) { m.visible = e.target.checked; });
+    });
+    legend.appendChild(l);
+  });
+  var tot = document.createElement('div');
+  tot.className = 'total';
+  tot.innerHTML = '<span>Total panjang as ke as</span><span class="mono">' + (total / 100).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' m</span>';
+  legend.appendChild(tot);
+
+  // ---------- tooltip ----------
+  var tip = document.getElementById('tip');
+  var ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  var pickGroups = [gStair, gBeam, gCol, gGut, gSlab];
+  function pick(e) {
+    var r = cv.getBoundingClientRect();
+    mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(mouse, camera);
+    var objs = [];
+    pickGroups.forEach(function (g) { if (g.visible) g.children.forEach(function (m) { if (m.visible) objs.push(m); }); });
+    var hits = ray.intersectObjects(objs, false);
+    if (!hits.length) { tip.hidden = true; return; }
+    var h = hits[0];
+    if (slabMat.opacity < 0.99) {
+      for (var i = 0; i < hits.length; i++) { if (hits[i].object.userData.kind !== 'slab') { h = hits[i]; break; } }
+    }
+    var u = h.object.userData, detail = u.detail;
+    if (u.kind === 'slab') {
+      var el = 12.70 + h.point.y / 1 ;
+      detail += ' · elevasi ' + el.toFixed(2).replace('.', ',');
+    }
+    tip.innerHTML = '<b>' + u.label + '</b><span>' + detail + '</span>';
+    tip.hidden = false;
+    var sx = e.clientX - r.left, sy = e.clientY - r.top;
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(6, Math.min(r.width - tw - 6, sx + 14)) + 'px';
+    tip.style.top = Math.max(6, Math.min(r.height - th - 6, sy + 14)) + 'px';
+  }
+  cv.addEventListener('pointermove', pick);
+  cv.addEventListener('pointerdown', pick);
+  cv.addEventListener('pointerleave', function () { tip.hidden = true; });
+
+  // ---------- ukuran + loop ----------
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+  (function loop() {
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+
+</body></html>
